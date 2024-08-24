@@ -1,6 +1,7 @@
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -8,14 +9,37 @@ import {
 import PageHeader from '../_components/PageHeader';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { prisma } from '@/db/db';
+import { CheckCircle2, MoreVertical, XCircle } from 'lucide-react';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  ActiveToggleDropDownItem,
+  DeleteDropDownItem,
+} from './_components/ProductActions';
 
-function ProductsTable() {
+async function ProductsTable() {
+  const products = await prisma.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      priceInCents: true,
+      isAvailableForPurchase: true,
+      _count: { select: { orders: true } },
+    },
+  });
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="w-0">
-            <span className="sr-only">Available For Purchose</span>
+            <span className="sr-only">Available For Purchase</span>
           </TableHead>
           <TableHead>Name</TableHead>
           <TableHead>Price</TableHead>
@@ -25,7 +49,57 @@ function ProductsTable() {
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody></TableBody>
+      <TableBody>
+        {products.map((product) => (
+          <TableRow key={product.id}>
+            <TableCell>
+              {product.isAvailableForPurchase ? (
+                <>
+                  <span className="sr-only">Available</span>
+                  <CheckCircle2 />
+                </>
+              ) : (
+                <>
+                  <span className="sr-only">Unavailable</span>
+                  <XCircle className="stroke-destructive" />
+                </>
+              )}
+            </TableCell>
+            <TableCell>{product.name}</TableCell>
+            <TableCell>{formatCurrency(product.priceInCents)}</TableCell>
+            <TableCell>{formatNumber(product.priceInCents)}</TableCell>
+            <TableCell>
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <MoreVertical />
+                  <span className="sr-only">Actions</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem asChild>
+                    <a download href={`/admin/products/${product.id}/download`}>
+                      Download
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/admin/products/${product.id}/edit`}>
+                      Edit
+                    </Link>
+                  </DropdownMenuItem>
+                  <ActiveToggleDropDownItem
+                    id={product.id}
+                    isAvailableForPurchase={product.isAvailableForPurchase}
+                  />
+                  <DropdownMenuSeparator />
+                  <DeleteDropDownItem
+                    id={product.id}
+                    disabled={product._count.orders > 0}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
     </Table>
   );
 }

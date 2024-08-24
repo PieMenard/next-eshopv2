@@ -39,12 +39,12 @@ async function getProductData() {
   const [activeCount, inactiveCount] = await Promise.all([
     prisma.product.count({
       where: {
-        isAvailableForPurchose: true,
+        isAvailableForPurchase: true,
       },
     }),
     prisma.product.count({
       where: {
-        isAvailableForPurchose: false,
+        isAvailableForPurchase: false,
       },
     }),
   ]);
