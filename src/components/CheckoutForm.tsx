@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from './ui/card';
 import { Button } from './ui/button';
+import { FormEvent, useState } from 'react';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY as string
@@ -64,12 +65,44 @@ export default CheckoutForm;
 function Form({ priceInCents }: { priceInCents: number }) {
   const stripe = useStripe();
   const elements = useElements();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>();
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    if (!stripe || !elements) return;
+    setIsLoading(true);
+
+    //Check for existing order
+
+    stripe
+      .confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/stripe/purchase-success`,
+        },
+      })
+      .then(({ error }) => {
+        if (error.type === 'card_error' || error.type == 'validation_error') {
+          setErrorMessage(error.message);
+        } else {
+          setErrorMessage('An unknown error ocurred');
+        }
+      })
+      .finally(() => setIsLoading(false));
+  }
+
   return (
-    <form>
+    <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
           <CardTitle>Checkout</CardTitle>
-          <CardDescription className="text-destructive">Error</CardDescription>
+          {errorMessage && (
+            <CardDescription className="text-destructive">
+              {errorMessage}
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           <PaymentElement />
@@ -78,9 +111,11 @@ function Form({ priceInCents }: { priceInCents: number }) {
           <Button
             className="w-full"
             size="lg"
-            disabled={stripe == null || elements == null}
+            disabled={!stripe || !elements || isLoading}
           >
-            Purchase - {formatCurrency(priceInCents / 100)}
+            {isLoading
+              ? 'Purchasing...'
+              : `Purchase - ${formatCurrency(priceInCents / 100)}`}
           </Button>
         </CardFooter>
       </Card>
