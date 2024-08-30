@@ -4,6 +4,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { Product } from '@prisma/client';
 import {
   Elements,
+  LinkAuthenticationElement,
   PaymentElement,
   useElements,
   useStripe,
@@ -106,6 +107,9 @@ function Form({ priceInCents }: { priceInCents: number }) {
         </CardHeader>
         <CardContent>
           <PaymentElement />
+          <div className="mt-4">
+            <LinkAuthenticationElement />
+          </div>
         </CardContent>
         <CardFooter>
           <Button
