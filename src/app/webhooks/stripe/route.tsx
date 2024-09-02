@@ -1,11 +1,10 @@
-import { prisma } from '@/db/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
 import Stripe from 'stripe';
+import { Resend } from 'resend';
+import { prisma } from '@/db/db';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY as string);
 
 export async function POST(req: NextRequest) {
   const event = await stripe.webhooks.constructEvent(
@@ -23,8 +22,7 @@ export async function POST(req: NextRequest) {
     const product = await prisma.product.findUnique({
       where: { id: productId },
     });
-
-    if (!product || !email) {
+    if (product == null || email == null) {
       return new NextResponse('Bad Request', { status: 400 });
     }
 
@@ -32,7 +30,6 @@ export async function POST(req: NextRequest) {
       email,
       orders: { create: { productId, pricePaidInCents } },
     };
-
     const {
       orders: [order],
     } = await prisma.user.upsert({
@@ -48,10 +45,11 @@ export async function POST(req: NextRequest) {
         expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
       },
     });
+
     await resend.emails.send({
       from: `Support <${process.env.SENDER_EMAIL}>`,
       to: email,
-      subject: 'Order confirmation',
+      subject: 'Order Confirmation',
       react: <h1>Hi</h1>,
     });
   }
